@@ -1,0 +1,27 @@
+{"frames": [
+{
+	"filename": "blueButtonDown",
+	"frame": {"x":0,"y":0,"w":80,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":80,"h":16},
+	"sourceSize": {"w":80,"h":16}
+},
+{
+	"filename": "blueButtonOut",
+	"frame": {"x":80,"y":0,"w":80,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":80,"h":16},
+	"sourceSize": {"w":80,"h":16}
+},
+{
+	"filename": "blueButtonOver",
+	"frame": {"x":160,"y":0,"w":80,"h":16},
+	"rotated": false,
+	"trimmed": false,
+	"spriteSourceSize": {"x":0,"y":0,"w":80,"h":16},
+	"sourceSize": {"w":80,"h":16}
+}
+
+]}

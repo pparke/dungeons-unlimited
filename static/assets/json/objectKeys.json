@@ -1,0 +1,10 @@
+{
+  "upStairs":                       1,
+  "downStairs":                     2,
+  "woodDoor":                       3,
+  "metalGate":                      4,
+  "woodDoor2":                      5,
+  "metalDoor":                      6,
+  "empty4":                         7,
+  "empty5":                         8
+}

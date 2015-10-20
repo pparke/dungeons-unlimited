@@ -33,7 +33,7 @@ class JobList extends Phaser.Plugin {
    */
   addJob (options) {
     let job = new Job(this, options);
-    job.graphics = this.highlight(Array.from(job.tiles.keys()), 0xffff00);
+    job.graphics = this.highlight(Array.from(job.blocks.keys()), 0xffff00);
     this.list.push(job);
     return job;
   }
@@ -89,33 +89,33 @@ class JobList extends Phaser.Plugin {
 
   /**
      Highlight
-     Highlight the tiles provided with the given color.
+     Highlight the blocks provided with the given color.
 
-     @param {array} tiles - the tiles to highlight
+     @param {array} blocks - the blocks to highlight
      @param {string|number} color - the color to highlight in
      @return {Phaser.Graphics} the graphics object that was created
   */
-  highlight (tiles, color) {
-    if (!Array.isArray(tiles)) {
-      tiles = [tiles];
+  highlight (blocks, color) {
+    if (!Array.isArray(blocks)) {
+      blocks = [blocks];
     }
 
-    // get the top leftmost tile
-    let topLeft = tiles.reduce((tl, tile) => {
-      if (tile.x <= tl.x && tile.y <= tl.y) {
-        return tile;
+    // get the top leftmost block
+    let topLeft = blocks.reduce((tl, block) => {
+      if (block.x <= tl.x && block.y <= tl.y) {
+        return block;
       }
       return tl;
-    }, tiles[0]);
+    }, blocks[0]);
 
-    // anchor at the top left most tile
+    // anchor at the top left most block
     let g = this.game.add.graphics(topLeft.worldX, topLeft.worldY);
     g.lineStyle(0, color, this.hlAlpha);
     g.beginFill(color, this.hlAlpha);
-    tiles.forEach((tile) => {
-      let x = (tile.x - topLeft.x) * tile.width;
-      let y = (tile.y - topLeft.y) * tile.height;
-      g.drawRect(x, y, tile.width, tile.height);
+    blocks.forEach((block) => {
+      let x = (block.x - topLeft.x) * block.width;
+      let y = (block.y - topLeft.y) * block.height;
+      g.drawRect(x, y, block.width, block.height);
     });
 
     g.endFill();
@@ -145,9 +145,9 @@ class Job {
     this.duration     = 0;
     this.graphics     = null;
 
-    this.tiles = new Map();
-    options.tiles.forEach((tile) => {
-      this.tiles.set(tile, {
+    this.blocks = new Map();
+    options.blocks.forEach((block) => {
+      this.blocks.set(block, {
         progress: 0,
         started: false,
         complete: false
@@ -172,24 +172,24 @@ class Job {
   /**
      Work
    */
-  work (tile, ...args) {
-    let task = this.tiles.get(tile);
+  work (block, ...args) {
+    let task = this.blocks.get(block);
     if (!task) {
-      console.log('task not found, tile:', tile)
+      console.log('task not found, block:', block)
       return;
     }
     // if started and not complete
     if (task.started && task.progress < 100) {
       task.progress += this.increment;
       if (this.action.perform) {
-        this.action.perform.call(this, tile, ...args);
+        this.action.perform.call(this, block, ...args);
       }
     }
     // if not started
     else if (!task.started) {
       task.started = true;
       if (this.action.begin) {
-        this.action.begin.call(this, tile, ...args);
+        this.action.begin.call(this, block, ...args);
       }
     }
     // if complete
@@ -197,11 +197,11 @@ class Job {
       task.complete = true;
 
       if (this.action.finish) {
-        this.action.finish.call(this, tile, ...args);
+        this.action.finish.call(this, block, ...args);
       }
 
       // check if there are any more tasks to do
-      let jobDone= !Array.from(this.tiles.values()).some((val) => {
+      let jobDone= !Array.from(this.blocks.values()).some((val) => {
         return !val.complete;
       });
 
@@ -246,11 +246,11 @@ class Job {
   locate (x, y) {
 
     let dest = new Phaser.Point(x, y);
-    let start = this.parent.level.tileAt(x, y);
+    let start = this.parent.level.blockAt(x, y);
 
-    let tiles = Array.from(this.tiles.entries());
-    // eliminate tiles that are complete
-    tiles = tiles.map((entry) => {
+    let blocks = Array.from(this.blocks.entries());
+    // eliminate blocks that are complete
+    blocks = blocks.map((entry) => {
       if (entry[1].complete) {
         return undefined;
       }
@@ -259,32 +259,32 @@ class Job {
       return key !== undefined;
     });
 
-    // if there are no tiles left in the job, bail
-    if (tiles.length === 0) {
+    // if there are no blocks left in the job, bail
+    if (blocks.length === 0) {
       return { success: false, path: [], destination: null };
     }
 
-    // then eliminate any tiles that are inaccessible
-    tiles = tiles.filter((tile) => {
-      return this.parent.level.isAccessible(tile.x, tile.y);
+    // then eliminate any blocks that are inaccessible
+    blocks = blocks.filter((block) => {
+      return this.parent.level.isAccessible(block.x, block.y);
     });
 
     // completely inaccessible, bail
-    if (tiles.length === 0) {
+    if (blocks.length === 0) {
       return { success: false, path: [], destination: null };
     }
 
     // get its passable neighbours
-    tiles = tiles.reduce((all, tile) => {
-      let neighbs = this.parent.level.getTileSurroundings(tile, true, false).filter((t) => {
+    blocks = blocks.reduce((all, block) => {
+      let neighbs = this.parent.level.getBlockSurroundings(block, true, false).filter((t) => {
         return this.parent.level.isPassable(t.x, t.y);
       });
       all = all.concat(neighbs);
       return all;
     }, []);
 
-    // sort the tiles according to distance
-    tiles = tiles.sort((a, b) => {
+    // sort the blocks according to distance
+    blocks = blocks.sort((a, b) => {
       if (dest.distance(a) < dest.distance(b)) {
         return 1;
       }
@@ -294,14 +294,14 @@ class Job {
       return 0;
     });
 
-    // try to find a route to any of the tiles, return the first found
+    // try to find a route to any of the blocks, return the first found
     let path        = null;
     let destination = null;
-    let success = tiles.some((tile) => {
-      let search = this.parent.astar.search(start, tile);
+    let success = blocks.some((block) => {
+      let search = this.parent.astar.search(start, block);
       if (search.success) {
         path        = search.path;
-        destination = tile;
+        destination = block;
       }
       return search.success;
     });
@@ -309,24 +309,32 @@ class Job {
   }
 
   /**
-     Get the tiles that are adjacent to the given position and part of the job's
-     tile property.
+     Get the blocks that are adjacent to the given position and part of the job's
+     block property.
      @param {number} x - the x position to start at
      @param {number} y - the y position to start at
-     @return {array} an array containing the adjacent tiles
+     @return {array} an array containing the adjacent blocks
    */
   touching (x, y) {
-    // tile around which we will check
-    let tile = this.parent.level.tileAt(x, y);
-    // neighbours of the above tile
-    let neighbs = this.parent.level.getTileSurroundings(tile, true, false);
-    let jobTiles = Array.from(this.tiles.keys());
-    // check if any of the neighbouring tiles are part of the job
-    let tiles = neighbs.filter((tile) => {
-      return jobTiles.includes(tile);
+    // block around which we will check
+    let block = this.parent.level.blockAt(x, y);
+    // neighbours of the above block
+    let neighbs = this.parent.level.getBlockSurroundings(block, true, false);
+    // blocks in the job
+    let jobBlocks = Array.from(this.blocks.entries());
+    // eliminate blocks that are complete
+    jobBlocks = jobBlocks.map((entry) => {
+      if (entry[1].complete) {
+        return undefined;
+      }
+      return entry[0];
+    });
+    // check if any of the neighbouring blocks are part of the job
+    let blocks = neighbs.filter((block) => {
+      return jobBlocks.includes(block);
     });
 
-    return tiles;
+    return blocks;
   }
 }
 

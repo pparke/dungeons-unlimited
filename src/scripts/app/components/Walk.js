@@ -38,7 +38,7 @@ class Walk extends Base {
     Sets the path and destination and begins the chain of movements
     along that path.
     @param {array} path - an array containing the sequence of tiles to travel
-    @param {Phaser.Tile} destination - the destination tile
+    @param {Block} destination - the destination block
   */
  walkPath (path, destination, onComplete) {
    console.log('%s Component received walk command, destination:', this.name, destination);
@@ -50,17 +50,6 @@ class Walk extends Base {
    if (path.length === 0) {
      return this.arrived();
    }
-   /*
-   let currentTile = this.level.tileAt(this.target.x, this.target.y);
-   let nextTile = this.path[this.step];
-   if (currentTile !== nextTile) {
-     let tween = this.game.add.tween(this.target).to( {x: nextTile.worldX + nextTile.centerX, y: nextTile.worldY + nextTile.centerY}, this.speed, this.ease, true);
-     tween.onComplete.addOnce(this.stepForward, this);
-   }
-   else {
-     this.stepForward();
-   }
-   */
  }
 
  /**
@@ -74,9 +63,9 @@ class Walk extends Base {
    }
    else if (this.step < this.path.length) {
      this.moving = true;
-     let tile = this.path[this.step];
+     let block = this.path[this.step];
      let tween = this.game.add.tween(this.target)
-      .to( {x: tile.worldX + tile.centerX, y: tile.worldY + tile.centerY}, this.speed, this.ease, true);
+      .to( {x: block.middleX, y: block.middleY}, this.speed, this.ease, true);
      tween.onComplete.addOnce(() => { this.moving = false; }, this);
      this.step += 1;
    }

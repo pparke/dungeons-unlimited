@@ -123,19 +123,19 @@ class Controls {
      @param {Phaser.Rectangle} rect - the selected area
    */
   onReleased (rect) {
-    let tiles = this.level.getTiles(rect.x, rect.y, rect.width, rect.height, 'walls', false);
+    let blocks = this.level.getBlocks(rect.x, rect.y, rect.width, rect.height);
 
-    if (tiles.length === 0) {
+    if (blocks.length === 0) {
       return;
     }
 
     switch (this.selectionMode) {
     case 'job':
-      this.assignJob(tiles);
+      this.assignJob(blocks);
       break;
 
     case 'info':
-      this.getInfo(tiles);
+      this.getInfo(blocks);
       break;
     }
   }
@@ -143,22 +143,22 @@ class Controls {
   /**
      Assign Job
      Add a job command to the job list.
-     @param {array} tiles - the array of tiles to apply the job to
+     @param {array} blocks - the array of blocks to apply the job to
    */
-  assignJob (tiles) {
+  assignJob (blocks) {
     let command = this.jobCommands[this.jobCommand];
-    command.tiles = tiles;
+    command.blocks = blocks;
     let job = this.jobList.addJob(command);
   }
 
   /**
      Get Info
-     Get information about the selected tiles.
-     @param {array} tiles - the array of tiles to examine
+     Get information about the selected blocks.
+     @param {array} blocks - the array of blocks to examine
    */
-  getInfo (tiles) {
-    tiles.forEach((tile) => {
-      console.log(this.level.getBlock(tile.x, tile.y));
+  getInfo (blocks) {
+    blocks.forEach((block) => {
+      console.log(this.level.getBlock(block.x, block.y));
     });
   }
 
@@ -193,8 +193,6 @@ class Controls {
     }
     else if (this.cursors.right.isDown) {
     }
-    else {
-    }
   }
 
 }
@@ -203,11 +201,11 @@ var jobCommands = {
   dig: {
     type:       'general',
     name:       'Dig',
-    tiles:      [],
+    blocks:     [],
     increment:  34,
     action: {
-      begin (tile) {
-        this.emitter = this.game.add.emitter(tile.worldX + tile.centerX, tile.worldY + tile.centerY);
+      begin (block) {
+        this.emitter = this.game.add.emitter(block.middleX, block.middleY);
         this.emitter.makeParticles('dust');
         this.emitter.setRotation(0, 0);
         this.emitter.setAlpha(0.3, 0.8);
@@ -215,15 +213,15 @@ var jobCommands = {
         this.emitter.gravity = -2;
       },
 
-      perform (tile) {
+      perform (block) {
         // explode, lifetime, n/a, num particles
         this.emitter.start(true, 500, null, 10);
       },
 
-      finish (tile) {
+      finish (block) {
         this.emitter.kill();
         this.emitter.destroy();
-        this.parent.level.removeWall(tile.x, tile.y, 1, 1, 'walls', true);
+        this.parent.level.removeWall(block.x, block.y, 1, 1, 'walls', true);
       }
     }
   },
@@ -231,11 +229,11 @@ var jobCommands = {
   buildWall: {
     type:       'general',
     name:       'Wall',
-    tiles:      [],
+    blocks:     [],
     increment:  34,
     action: {
-      begin (tile) {
-        this.emitter = this.game.add.emitter(tile.worldX + tile.centerX, tile.worldY + tile.centerY);
+      begin (block) {
+        this.emitter = this.game.add.emitter(block.middleX, block.middleY);
         this.emitter.makeParticles('dust');
         this.emitter.setRotation(0, 0);
         this.emitter.setAlpha(0.3, 0.8);
@@ -243,15 +241,15 @@ var jobCommands = {
         this.emitter.gravity = -2;
       },
 
-      perform (tile) {
+      perform (block) {
         // explode, lifetime, n/a, num particles
         this.emitter.start(true, 500, null, 10);
       },
 
-      finish (tile) {
+      finish (block) {
         this.emitter.kill();
         this.emitter.destroy();
-        this.parent.level.drawWall(tile.x, tile.y, 1, 1, 'walls', true);
+        console.log(this.parent.level.addWall(block.x, block.y, 1, 1));
       }
     }
   }

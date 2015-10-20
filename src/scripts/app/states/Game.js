@@ -83,15 +83,16 @@ export default class Game extends Phaser.State {
     //this.level.addTileset('walls', 'walls', 'wallKeys');
     this.level.addTileset('walls', 'walls', 'wallKeys', 'walls', collisions, this.playerCollisionGroup);
 
-    this.level.drawRect(0, 0, this.level.width, this.level.height, 'stoneMossFloor', 'floors', true);
-    this.level.drawWall(0, 0, this.level.width, this.level.height, 'walls', true);
-    this.level.removeWall(this.level.centerX-10, this.level.centerY-10, 20, 20, 'walls', true);
+    this.level.drawFloor(0, 0, this.level.width, this.level.height, 'stoneMossFloor');
+    this.level.addWall(0, 0, this.level.width, this.level.height);
+    this.level.removeWall(this.level.centerX-10, this.level.centerY-10, 20, 20);
+    this.level.addWall(this.level.centerX-9, this.level.centerY+5, 5, 5);
 
     //this.level.drawRect(5, 5, 5, 5,   'e,e,e|w,w,w|e,e,e', 'walls', true);
     //this.level.drawRect(12, 12, 1, 2, 'e,e,e|w,w,w|e,e,e', 'walls', true);
-    //this.level.drawWall(20, 0, 20, 21, 'walls', true);
-    //this.level.drawWall(0, 21, 20, 20, 'walls', true);
-    //this.level.drawWall(20, 20, 20, 20, 'walls', true);
+    //this.level.addWall(20, 0, 20, 21, 'walls', true);
+    //this.level.addWall(0, 21, 20, 20, 'walls', true);
+    //this.level.addWall(20, 20, 20, 20, 'walls', true);
 
     console.log('[info] # of tiles: ', this.level.tileNames.size);
 

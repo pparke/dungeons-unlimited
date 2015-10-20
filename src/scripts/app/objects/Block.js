@@ -10,8 +10,15 @@ class Block {
   constructor (game, level, x, y, ...args) {
     this.game     = game;
     this.level    = level;
+    this.name     = `${x}-${y}`;
     this.x        = x;
     this.y        = y;
+    this.width    = this.level.tileWidth;
+    this.height   = this.level.tileHeight;
+    this.worldX   = x * this.level.tileWidth;
+    this.worldY   = y * this.level.tileHeight;
+    this.middleX  = this.worldX + this.level.tileWidth / 2;
+    this.middleY  = this.worldY + this.level.tileHeight / 2;
     this.objects  = [];
     this.medium   = {
       type: 'air',

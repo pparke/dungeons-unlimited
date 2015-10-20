@@ -34,15 +34,14 @@ class AStar extends Phaser.Plugin {
      Search
      Performs an a* search for the best path from
      start to goal.
-     @param {Phaser.Tile} start - the start tile
-     @param {Phaser.Tile} goal - the goal tile
-     @return {Map} the sequence of tiles that make up the path
+     @param {Block} start - the start block
+     @param {Block} goal - the goal block
+     @return {Map} the sequence of blocks that make up the path
    */
   search (start, goal) {
     if (!start) { throw new Error('No start specified.'); }
     if (!goal) { throw new Error('No goal specified'); }
     let output = { success: false, path: null, iterations: 0 };
-    console.log('checking if passable and accessible')
     // if the goal is impassable or inaccessible, bail
     if (!this.map.isPassable(goal.x, goal.y) || !this.map.isAccessible(goal.x, goal.y)) {
       return output;
@@ -57,17 +56,15 @@ class AStar extends Phaser.Plugin {
     came_from.set(start, null);
     cost_so_far.set(start, 0);
 
-    console.log('beginning loop')
     while (!frontier.empty() && output.iterations < 10000) {
       output.iterations++;
       let current = frontier.pop();
 
       // finish if the goal has been found
-      console.log('current and goal', current, goal)
       if (current === goal) {
         output.success = true;
         if (this.debug) {
-          this.markTile(current, 0xFF0000, 0.3);
+          this.markBlock(current, 0xFF0000, 0.3);
         }
         break;
       }
@@ -75,20 +72,19 @@ class AStar extends Phaser.Plugin {
 
       neighbs.forEach((next) => {
         let new_cost = cost_so_far.get(current) + this.cost(current, next);
-        // if we haven't visited the tile
+        // if we haven't visited the block
         if (!came_from.has(next) || new_cost < cost_so_far.get(next)) {
-          console.log('adding to came from')
           if (this.debug) {
-            this.markTile(next, 0x00FF00, 0.1);
+            this.markBlock(next, 0x00FF00, 0.1);
           }
 
-          // set the cost of the tile
+          // set the cost of the block
           cost_so_far.set(next, new_cost);
           // calculate the priority
           let priority = new_cost + this.heuristics[this.currentHeuristic](goal, next);
-          // add the tile to the frontier
+          // add the block to the frontier
           frontier.push(next, priority);
-          // set the tile that we came from to reach this one
+          // set the block that we came from to reach this one
           came_from.set(next, current);
         }
       });
@@ -111,35 +107,35 @@ class AStar extends Phaser.Plugin {
 
   /**
      Neighbours
-     Returns an array containing the neighbouring tiles.
+     Returns an array containing the neighbouring blocks.
    */
-  neighbours (tile) {
-    let ret = this.map.getTileSurroundings(tile, true, false);
+  neighbours (block) {
+    let ret = this.map.getBlockSurroundings(block, true, false);
 
-    return ret.filter((tile) => {
-      // no tile, no go
-      if (!tile) {
+    return ret.filter((block) => {
+      // no block, no go
+      if (!block) {
         return false;
       }
-      return this.map.isPassable(tile.x, tile.y);
+      return this.map.isPassable(block.x, block.y);
     });
   }
 
   /**
      Cost
-     Determine the cost of movement from one tile to the next.
+     Determine the cost of movement from one block to the next.
    */
   cost (a, b) {
     return Phaser.Point.distance(a, b);
   }
 
   /**
-     Mark Tile
-     Draw a rect over the tile.
+     Mark Block
+     Draw a rect over the block.
    */
-  markTile (tile, color, alpha) {
+  markBlock (block, color, alpha) {
     this.graphics.beginFill(color, alpha);
-    this.graphics.drawRect(tile.worldX, tile.worldY, tile.width, tile.height);
+    this.graphics.drawRect(block.worldX, block.worldY, block.width, block.height);
     this.graphics.endFill();
   }
 }

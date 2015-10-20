@@ -88,11 +88,11 @@ class Level extends Phaser.Tilemap {
      @return {boolean} true if any of the surrounding tiles are clear
    */
   isAccessible (x, y) {
-    let tile = this.getTile(x, y, 'walls', true);
-    let tiles = this.getTileSurroundings(tile, true, false);
-    // test if any of the surrounding tiles are passable
-    return tiles.some((tile) => {
-      return this.isPassable(tile.x, tile.y);
+    let block = this.getBlock(x, y);
+    let blocks = this.getBlockSurroundings(block, true, false);
+    // test if any of the surrounding blocks are passable
+    return blocks.some((block) => {
+      return this.isPassable(block.x, block.y);
     });
   }
 
@@ -258,127 +258,173 @@ class Level extends Phaser.Tilemap {
     }
   }
 
-  /**
-     Draw Wall
+  drawFloor (x, y, width, height, key) {
+    let blocks = this.getBlocks(x, y, width, height);
 
+    // fill the specified area with solid wall
+    let tileIndex = this.getTileIndex(key);
+    blocks.forEach((block) => {
+      block.getFloor().index = tileIndex;
+      // update all of the changed and surrounding tile indices
+      let surroundings = this.getBlockSurroundings(block, true, false);
+      surroundings.forEach((b) => {
+        if (b) {
+          //this.updateFloorIndex();
+        }
+      });
+    });
+  }
+
+  /**
+     Add Wall
      @param {number} x - the x position to start at
      @param {number} y - the y position to start at
      @param {number} width - the width of the wall
      @param {number} height - the height of the wall
-     @param {string|number} layerKey - the layer to draw onto
-     @param {boolean} fill - whether to fill in the rectangle
    */
-  drawWall (x, y, width, height, layerKey, fill) {
-    let layer = this.getLayerObject(layerKey);
-    let sx = x - 1 < 0 ? 0 : x - 1;
-    let sy = y - 1 < 0 ? 0 : y - 1;
-    // calculate the end of the slice for the rows and columns
-    // making sure we are within the size of the layer
-    let xEnd = x + width + 1 > layer.width + 1 ? layer.width + 1 : x + width + 1;
-    let yEnd = y + height + 1 > layer.height + 1 ? layer.height + 1 : y + height + 1;
+  addWall (x, y, width, height) {
+    let blocks = this.getBlocks(x, y, width, height);
 
     // fill the specified area with solid wall
     let tileIndex = this.getTileIndex('w,w,w|w,w,w|w,w,w');
-    this.drawRect(x, y, width, height, tileIndex, layerKey, fill);
-
-    // update all of the changed and surrounding tile indices
-    let surroundings = this.getTileSurroundings(this.getBlock(x, y).getWall());
-    surroundings.forEach((row) => {
-      row.forEach((t) => {
-        this.updateTileIndex(t);
-      });
+    blocks.forEach((block) => {
+      block.getWall().index = tileIndex;
+      this.getLayerObject('walls').dirty = true;
     });
 
+    let edgeBlocks = [];
+
+    if (blocks.length === 1) {
+      edgeBlocks = this.getBlockSurroundings(blocks[0], true, true);
+    }
+    else {
+      // top
+      edgeBlocks = edgeBlocks.concat(this.getBlocks(x - 1, y - 1, width, 2, 'walls', -1));
+      // right
+      edgeBlocks = edgeBlocks.concat(this.getBlocks(x + width - 1, y - 1, 2, height, 'walls', -1));
+      // bottom
+      edgeBlocks = edgeBlocks.concat(this.getBlocks(x + 1, y + height - 1, width, 2, 'walls', -1));
+      // left
+      edgeBlocks = edgeBlocks.concat(this.getBlocks(x - 1, y, 2, height + 1, 'walls', -1));
+    }
+
+    edgeBlocks.forEach((block) => {
+      this.updateWallIndex(block);
+    });
+
+    return blocks;
   }
 
-  removeWall (x, y, width, height, layerKey, fill) {
+  /**
+     Remove Wall
+     Remove a section of wall
+     @param {number} x - the x position to start at
+     @param {number} y - the y position to start at
+     @param {number} width - the width of the wall
+     @param {number} height - the height of the wall
+   */
+  removeWall (x, y, width, height) {
+    let blocks = this.getBlocks(x, y, width, height, 'walls', -1);
 
-    let tiles = this.getTiles(x, y, width, height, layerKey);
-
-    tiles.forEach((tile) => {
-      let surroundings = this.getTileSurroundings(tile);
-      if (tile.body) {
-        tile.body.removeFromWorld();
+    blocks.forEach((block) => {
+      if (block.body) {
+        block.body.removeFromWorld();
       }
-      this.removeTile(tile.x, tile.y, 'walls');
-      surroundings.forEach((row) => {
-        row.forEach((t) => {
-          this.updateTileIndex(t);
-        });
-      });
+      this.removeTile(block.x, block.y, 'walls');
+    });
+
+    let surroundingBlocks = [];
+
+    if (blocks.length === 1) {
+      surroundingBlocks = this.getBlockSurroundings(blocks[0], true, true);
+    }
+    else {
+      // top
+      surroundingBlocks = surroundingBlocks.concat(this.getBlocks(x - 1, y - 1, width + 1, 1, 'walls', -1));
+      // right
+      surroundingBlocks = surroundingBlocks.concat(this.getBlocks(x + width, y - 1, 1, height + 1, 'walls', -1));
+      // bottom
+      surroundingBlocks = surroundingBlocks.concat(this.getBlocks(x, y + height, width + 1, 1, 'walls', -1));
+      // left
+      surroundingBlocks = surroundingBlocks.concat(this.getBlocks(x - 1, y, 1, height + 1, 'walls', -1));
+    }
+
+    surroundingBlocks.forEach((block) => {
+      this.updateWallIndex(block);
     });
   }
 
   /**
-     Get Tiles
-     Get a flat array containing all of the tiles in the specified area
+     Update Wall Index
+     Updates a wall's index based on its surroundings.
+   */
+  updateWallIndex (block) {
+    let surroundings = this.getBlockSurroundings(block);
+    // convert the surroudings into a key
+    let key = surroundings.map((row) => {
+      return row.map((b) => {
+        if (!b) {
+          return 'e';
+        }
+        return b.getWall().index > -1 ? 'w' : 'e';
+      }).join(',');
+    }).join('|');
+    let index = this.getTileIndex(key);
+    if (index === undefined) {
+      console.log('index is undefined', index, this);
+    }
+    else {
+      block.getWall().index = index;
+    }
+
+    return block;
+  }
+
+  /**
+     Get Blocks
+     Get a flat array containing all of the blocks in the specified area
 
      @param {number} x - the x coordinate to start at
      @param {number} y - the y coordinate to start at
      @param {number} width - the width of the area
      @param {number} height - height of the area
-     @param {string|number} layerKey - the key of the layer to get the tiles from
-     @param {boolean} removeEmpty - do not include empty tiles in the results if true
-     @return {array} a flat array containing all the tiles
+     @param {string} layerKey - the tile layer in the block to examine
+     @param {number} removeType - do not include blocks whose tile in the specified layer matches this index
+     @return {array} a flat array containing all the blocks
    */
-  getTiles (x, y, width, height, layerKey, removeEmpty) {
-    let layer = this.getLayerObject(layerKey);
+  getBlocks (x, y, width, height, layerKey, removeType) {
     x = x < 0 ? 0 : x;
     y = y < 0 ? 0 : y;
-    let xEnd = x + width > layer.width ? layer.width : x + width;
-    let yEnd = y + height > layer.height ? layer.height : y + height;
+    width = width === 0 ? 1 : width;
+    height = height === 0 ? 1 : height;
+    let xEnd = x + width > this.width ? this.width : x + width;
+    let yEnd = y + height > this.height ? this.height : y + height;
 
-    let tiles = layer.data.slice(y, yEnd).reduce((accum, row) => {
+    let blocks = this.blocks.slice(y, yEnd).reduce((accum, row) => {
       return accum.concat(row.slice(x, xEnd));
     }, []);
 
-    if (removeEmpty) {
-      tiles = tiles.filter((tile) => {
-        return tile.index !== -1;
+    if (layerKey) {
+      if (removeType === undefined) { removeType = -1; }
+      blocks = blocks.filter((block) => {
+        return block.getWall().index !== removeType;
       });
     }
 
-    return tiles;
+    return blocks;
   }
 
-  /**
-     Update Tile Index
-     Updates a tile's index based on its surroundings.
 
-     @param {Phaser.Tile} tile - the tile to update
-   */
-  updateTileIndex (tile) {
-    if (!tile) { return; }
-
-    let surroundings = this.getTileSurroundings(tile);
-    // convert the surroudings into a key
-    let key = surroundings.map((row) => {
-      return row.map((t) => {
-        if (!t) {
-          return 'e';
-        }
-        return t.index > -1 ? 'w' : 'e';
-      }).join(',');
-    }).join('|');
-    // set the tile index based on the key produced
-    let index = this.getTileIndex(key);
-    if (index === undefined) {
-      console.log('key is undefined', key, tile);
-    }
-    else {
-      tile.index = index;
-    }
-  }
 
   /**
-     Get Tile Surroundings
-     Get the tiles surrounding and including this tile as a multidimensional array
+     Get Block Surroundings
+     Get the blocks surrounding and including this block as an array
 
-     @param {Phaser.Tile} tile - the tile to get the surroundings of
-     @return {array} a multidimensional array containing the tile and its surroundings
+     @param {Block} block - the block to get the surroundings of
+     @return {array} an array containing the surrounding blocks and optionally the center block
    */
-  getTileSurroundings (tile, flat, center = true) {
-    if (!tile || !tile.layer) {
+  getBlockSurroundings (block, flat, center = true) {
+    if (!block) {
       if (flat) {
         return [];
       }
@@ -386,77 +432,120 @@ class Level extends Phaser.Tilemap {
         return [[],[],[]];
       };
     }
-    let tiles = [];
+    let blocks = [];
     let row1 = [];
     let row2 = [];
     let row3 = [];
 
 
-    let layerIndex = this.getLayer(tile.layer.name);
-    row1.push(this.getTileNW(layerIndex, tile.x, tile.y));
-    row1.push(this.getTileAbove(layerIndex, tile.x, tile.y));
-    row1.push(this.getTileNE(layerIndex, tile.x, tile.y));
-    row2.push(this.getTileLeft(layerIndex, tile.x, tile.y));
+    row1.push(this.getBlockNW(block.x, block.y));
+    row1.push(this.getBlockN(block.x, block.y));
+    row1.push(this.getBlockNE(block.x, block.y));
+    row2.push(this.getBlockW(block.x, block.y));
     if (center) {
-      row2.push(tile);
+      row2.push(block);
     }
-    row2.push(this.getTileRight(layerIndex, tile.x, tile.y));
-    row3.push(this.getTileSW(layerIndex, tile.x, tile.y));
-    row3.push(this.getTileBelow(layerIndex, tile.x, tile.y));
-    row3.push(this.getTileSE(layerIndex, tile.x, tile.y));
+    row2.push(this.getBlockE(block.x, block.y));
+    row3.push(this.getBlockSW(block.x, block.y));
+    row3.push(this.getBlockS(block.x, block.y));
+    row3.push(this.getBlockSE(block.x, block.y));
 
     if (flat) {
-      tiles = tiles.concat(row1, row2, row3);
+      blocks = blocks.concat(row1, row2, row3);
     }
     else {
-      tiles.push(row1, row2, row3);
+      blocks.push(row1, row2, row3);
     }
-    return tiles;
+    return blocks;
   }
 
   /**
-     Tile At
-     Get the tile at the given world coordinates.
+     Block At
+     Get the block at the given world coordinates.
 
      @param {number} x - the x coordinate
      @param {number} y - the y coordinate
-     @param {string|number} layer - the key for the tile layer, walls by default
      @return {Phaser.Tile} the tile at the given position
    */
-  tileAt (x, y, layer) {
-    layer = layer || 'walls';
-    return this.getTileWorldXY(x, y, this.tileWidth, this.tileHeight, layer, true)
+  blockAt (x, y) {
+    x = this.game.math.snapToFloor(x, this.tileWidth) / this.tileWidth;
+    y = this.game.math.snapToFloor(y, this.tileHeight) / this.tileHeight;
+
+    return this.getBlock(x, y);
   }
 
-  getTileNW (layer, x, y) {
+
+  getBlockNW (x, y) {
     if (x > 0 && y > 0) {
-      return this.layers[layer].data[y - 1][x - 1];
+      x -= 1;
+      y -= 1;
+      return this.getBlock(x, y);
     }
     return null;
   }
 
-  getTileNE (layer, x, y) {
-    if (x < this.layers[layer].width - 1 && y > 0) {
-      return this.layers[layer].data[y - 1][x + 1];
+  getBlockN (x, y) {
+    if (y > 0) {
+      y -= 1;
+      return this.getBlock(x, y);
     }
     return null;
   }
 
-  getTileSW (layer, x, y) {
-    if (x > 0 && y < this.layers[layer].height - 1) {
-      return this.layers[layer].data[y + 1][x - 1];
+  getBlockNE (x, y) {
+    if (x < this.width - 1 && y > 0) {
+      x += 1;
+      y -= 1;
+      return this.getBlock(x, y);
     }
     return null;
   }
 
-  getTileSE (layer, x, y) {
-    if ((x < this.layers[layer].width - 1) && (y < this.layers[layer].height - 1)) {
-      return this.layers[layer].data[y + 1][x + 1];
+  getBlockE (x, y) {
+    if (x < this.width - 1) {
+      x += 1;
+      return this.getBlock(x, y);
     }
     return null;
   }
+
+  getBlockSE (x, y) {
+    if ((x < this.width - 1) && (y < this.height - 1)) {
+      x += 1;
+      y += 1;
+      return this.getBlock(x, y);
+    }
+    return null;
+  }
+
+  getBlockS (x, y) {
+    if (y < this.height - 1) {
+      y += 1;
+      return this.getBlock(x, y);
+    }
+    return null;
+  }
+
+  getBlockSW (x, y) {
+    if (x > 0 && y < this.height - 1) {
+      x -= 1;
+      y += 1;
+      return this.getBlock(x, y);
+    }
+    return null;
+  }
+
+  getBlockW (x, y) {
+    if (x > 0) {
+      x -= 1;
+      return this.getBlock(x, y);
+    }
+    return null;
+  }
+
 
   /**
+    * TODO: update to work with Block class
     * Goes through all tiles in this Tilemap and the given TilemapLayer and converts those set to collide into physics bodies.
     * Only call this *after* you have specified all of the tiles you wish to collide with calls like Tilemap.setCollisionBetween, etc.
     * Every time you call this method it will destroy any previously created bodies and remove them from the world.

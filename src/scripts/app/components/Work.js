@@ -12,7 +12,7 @@ class Work extends Base {
    this.name            = 'Work';
    this.jobList         = jobList;
    this.currentJob      = null;
-   this.workingTile     = null;
+   this.workingBlock     = null;
    this.workSpeed       = 500;
    this.working         = false;
    this.jobSearchSpeed  = 1000;
@@ -65,6 +65,28 @@ class Work extends Base {
  }
 
  /**
+    Walk to Job
+    Find a path to the provided job and send signal to begin moving
+    to the site.  If a path can't be found, return the job to the list.
+    @param {Job} job - the job to move to
+  */
+ walkToJob (job) {
+   let search = job.locate(this.target.position.x, this.target.position.y);
+   if (search.success) {
+     this.currentJob = job;
+     this.publish('walk', search.path, search.destination, 'arrived');
+   }
+   else {
+     console.log('No path to job');
+     console.log('job', job)
+     this.jobList.returnJob(job);
+     this.currentJob = null;
+     this.target.changeState('idle');
+     // TODO: look for new job?
+   }
+ }
+
+ /**
     Arrived At Job
     Change state to work and begin the job.
   */
@@ -77,6 +99,24 @@ class Work extends Base {
    }
    // get a new tile to work on
    this.getNewTile();
+ }
+
+ /**
+    Get New Tile
+    Gets a new tile from the surrounding tiles that are part of
+    the job and assigns it to workingBlock
+  */
+ getNewTile () {
+   // get the first accessible tile in the job
+   let block = this.currentJob.touching(this.target.x, this.target.y)[0];
+
+   if (block) {
+     this.workingBlock = block;
+   }
+   // if there is no tile within range
+   else {
+     this.walkToJob(this.currentJob);
+   }
  }
 
  /**
@@ -96,7 +136,7 @@ class Work extends Base {
     else if (this.currentJob.started && !this.currentJob.complete) {
       this.working = true;
 
-      let taskDone = this.currentJob.work(this.workingTile);
+      let taskDone = this.currentJob.work(this.workingBlock);
 
       if (!taskDone) {
         // continue working
@@ -110,46 +150,6 @@ class Work extends Base {
     else if (this.currentJob.complete) {
       console.log('Job Complete');
       this.target.changeState('idle');
-    }
-  }
-
-  /**
-     Get New Tile
-     Gets a new tile from the surrounding tiles that are part of
-     the job and assigns it to workingTile
-   */
-  getNewTile () {
-    // get the first accessible tile in the job
-    let tile = this.currentJob.touching(this.target.x, this.target.y)[0];
-
-    if (tile) {
-      this.workingTile = tile;
-    }
-    // if there is no tile within range
-    else {
-      this.walkToJob(this.currentJob);
-    }
-  }
-
-  /**
-     Walk to Job
-     Find a path to the provided job and send signal to begin moving
-     to the site.  If a path can't be found, return the job to the list.
-     @param {Job} job - the job to move to
-   */
-  walkToJob (job) {
-    let search = job.locate(this.target.position.x, this.target.position.y);
-    if (search.success) {
-      this.currentJob = job;
-      this.publish('walk', search.path, search.destination, 'arrived');
-    }
-    else {
-      console.log('No path to job');
-      console.log('job', job)
-      this.jobList.returnJob(job);
-      this.currentJob = null;
-      this.target.changeState('idle');
-      // TODO: look for new job?
     }
   }
 }

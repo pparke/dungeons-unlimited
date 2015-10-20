@@ -1,15 +1,19 @@
 /*
  * JobList plugin
  */
+ import Highlight from '../objects/Highlight';
 
 class JobList extends Phaser.Plugin {
 
   constructor (game, parent, astar, level) {
     super(game, parent);
 
-    this.astar = astar;
-    this.level = level;
-    this.list = [];
+    this.astar      = astar;
+    this.level      = level;
+    this.list       = [];
+    this.highlight  = new Highlight(game);
+
+    this.game.add.existing(this.highlight);
 
     this.typeColors = {
 
@@ -33,7 +37,7 @@ class JobList extends Phaser.Plugin {
    */
   addJob (options) {
     let job = new Job(this, options);
-    job.graphics = this.highlight(Array.from(job.blocks.keys()), 0xffff00);
+    job.highlight = this.highlight.markAll(Array.from(job.blocks.keys()), 0xffff00, this.hlAlpha);
     this.list.push(job);
     return job;
   }
@@ -95,6 +99,7 @@ class JobList extends Phaser.Plugin {
      @param {string|number} color - the color to highlight in
      @return {Phaser.Graphics} the graphics object that was created
   */
+  /*
   highlight (blocks, color) {
     if (!Array.isArray(blocks)) {
       blocks = [blocks];
@@ -122,6 +127,7 @@ class JobList extends Phaser.Plugin {
 
     return g;
   }
+  */
 }
 
 class Job {
@@ -143,7 +149,7 @@ class Job {
     this.start        = 0;
     this.end          = 0;
     this.duration     = 0;
-    this.graphics     = null;
+    this.highlight    = null;
 
     this.blocks = new Map();
     options.blocks.forEach((block) => {
@@ -200,8 +206,11 @@ class Job {
         this.action.finish.call(this, block, ...args);
       }
 
+      // clear the highlight on the block
+      this.highlight.clearBlock(block);
+
       // check if there are any more tasks to do
-      let jobDone= !Array.from(this.blocks.values()).some((val) => {
+      let jobDone = !Array.from(this.blocks.values()).some((val) => {
         return !val.complete;
       });
 
@@ -223,8 +232,10 @@ class Job {
       this.complete = true;
       this.end = new Date().getTime();
       this.duration = this.end - this.start;
+      // TODO: add job management on JobList to record history and take
+      // care of clean up
       // clean up graphics
-      this.graphics.destroy();
+      //this.graphics.destroy();
 
     }
     else if (!this.started) {

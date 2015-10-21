@@ -31,6 +31,16 @@ class Menu extends Phaser.Group {
         over: 'blueButtonOver',
         out: 'blueButtonOut',
         down: 'blueButtonDown'
+      },
+      info: {
+        over: 'infoButtonOver',
+        out: 'infoButtonOut',
+        down: 'infoButtonDown'
+      },
+      job: {
+        over: 'jobButtonOver',
+        out: 'jobButtonOut',
+        down: 'jobButtonDown'
       }
     }
   }
@@ -38,19 +48,21 @@ class Menu extends Phaser.Group {
   /**
      Create Button
    */
-  createButton (x, y, action, context, text) {
-    let button = this.game.add.button(x, y, this.buttonKeys.image, action, context, this.buttonKeys.blue.over, this.buttonKeys.blue.out, this.buttonKeys.blue.down);
+  createButton (x, y, action, context, text, key='blue') {
+    let button = this.game.add.button(x, y, this.buttonKeys.image, action, context, this.buttonKeys[key].over, this.buttonKeys[key].out, this.buttonKeys[key].down);
     let centerX = button.x + button.width/2;
     let centerY = button.y + button.height/2;
-    // create the label for the button
-    let label = this.game.add.retroFont(this.font.key, this.font.width, this.font.height, this.font.chars, this.font.charsPerRow, this.font.xSpacing, this.font.ySpacing, this.font.xOffset, this.font.yOffset);
-    // this font supports lowercase chars
-    label.autoUpperCase = this.font.upperCaseOnly;
-    label.text = text;
-    let image = this.game.add.image(centerX, centerY, label);
-    image.anchor.set(0.5, 0.5);
     this.add(button);
-    this.add(image);
+    if (text) {
+      // create the label for the button
+      let label = this.game.add.retroFont(this.font.key, this.font.width, this.font.height, this.font.chars, this.font.charsPerRow, this.font.xSpacing, this.font.ySpacing, this.font.xOffset, this.font.yOffset);
+      // this font supports lowercase chars
+      label.autoUpperCase = this.font.upperCaseOnly;
+      label.text = text;
+      let image = this.game.add.image(centerX, centerY, label);
+      image.anchor.set(0.5, 0.5);
+      this.add(image);
+    }
 
     return button;
   }

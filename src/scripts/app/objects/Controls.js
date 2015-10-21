@@ -4,6 +4,7 @@
 */
 import SelectBox  from './SelectBox';
 import Menu       from './Menu';
+import InfoPane   from './InfoPane';
 
 class Controls {
   constructor (game, level, jobList, ...args) {
@@ -20,6 +21,7 @@ class Controls {
     this.jobCommands    = jobCommands;
     this.jobCommand     = 'dig';
     this.menu           = new Menu(this.game);
+    this.infoPane       = new InfoPane(this.game);
 
     this.inputKeys = {
       w:      this.game.input.keyboard.addKey(Phaser.Keyboard.W),
@@ -104,8 +106,15 @@ class Controls {
     this.selection.events.onReleased.add( this.onReleased, this);
   }
 
+  /**
+     Setup Menu
+     Set up the right click menu
+   */
   setupMenu () {
-    let dy = 0;
+    let dy = 17;
+    // create buttons for the action categories
+    this.menu.createButton(24, 0, () => this.selectionMode = 'info', this, null, 'info');
+    this.menu.createButton(41, 0, () => this.selectionMode = 'job', this, null, 'job');
     // create buttons for each command
     for (let key of Object.keys(this.jobCommands)) {
       let button = this.menu.createButton(0, dy, () => this.jobCommand = key, this, this.jobCommands[key].name);
@@ -157,6 +166,7 @@ class Controls {
      @param {array} blocks - the array of blocks to examine
    */
   getInfo (blocks) {
+    this.infoPane.showPane();
     blocks.forEach((block) => {
       console.log(this.level.getBlock(block.x, block.y));
     });
@@ -202,25 +212,31 @@ var jobCommands = {
     type:       'general',
     name:       'Dig',
     blocks:     [],
-    increment:  34,
+    increment:  10,
+    maxWorkers: 2,
     action: {
       begin (block) {
-        this.emitter = this.game.add.emitter(block.middleX, block.middleY);
-        this.emitter.makeParticles('dust');
-        this.emitter.setRotation(0, 0);
-        this.emitter.setAlpha(0.3, 0.8);
-        this.emitter.setScale(0.5, 1);
-        this.emitter.gravity = -2;
+        let task = this.blocks.get(block);
+        task.emitter = this.getEmitter();
+        task.emitter.x = block.middleX;
+        task.emitter.y = block.middleY;
+        task.emitter.makeParticles('dust');
+        task.emitter.setRotation(0, 0);
+        task.emitter.setAlpha(0.3, 0.8);
+        task.emitter.setScale(0.5, 1);
+        task.emitter.gravity = -2;
       },
 
       perform (block) {
+        let task = this.blocks.get(block);
         // explode, lifetime, n/a, num particles
-        this.emitter.start(true, 500, null, 10);
+        task.emitter.start(true, 500, null, 10);
       },
 
       finish (block) {
-        this.emitter.kill();
-        this.emitter.destroy();
+        let task = this.blocks.get(block);
+        task.emitter.kill();
+        //this.emitter.destroy();
         this.parent.level.removeWall(block.x, block.y, 1, 1, 'walls', true);
       }
     }

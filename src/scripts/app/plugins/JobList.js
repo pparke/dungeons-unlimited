@@ -21,14 +21,6 @@ class JobList extends Phaser.Plugin {
     this.hlAlpha    = 0.3;
   }
 
-  init () {
-    // TODO: Stub
-  }
-
-  update () {
-    // TODO: Stub
-  }
-
   /**
      Add Job
      Add a new job to the list
@@ -53,18 +45,34 @@ class JobList extends Phaser.Plugin {
   getJob (options) {
     let firstJob = null;
     this.list.some((job, i) => {
-      let match = job.type === options.type;
+      // make sure the job isn't complete
+      if (job.complete) {
+        return false;
+      }
+      // check the job type
+      if (job.type !== options.type) {
+        return false;
+      }
+      // check if the maximum number of workers has been reached
+      if (job.numWorkers >= job.maxWorkers) {
+        return false;
+      }
+      // make sure a task is available
+      if (job.numTasks === 0) {
+        return false;
+      }
+      // check the required tools
       if (options.tools) {
         // all tools required by the job must be in options.tools
-        match = match && job.tools.every((tool) => {
-          return options.tools.indexOf(tool) > -1;
-        });
+        if (!job.tools.every((tool) => { return options.tools.indexOf(tool) > -1; })) {
+          return false;
+        }
       }
-      if (match) {
-        firstJob = job;
-        this.list.splice(i, 1);
-      }
-      return match;
+      // we can take the job
+      firstJob = job;
+      job.numWorkers += 1;
+      //this.list.splice(i, 1);
+      return true;
     });
 
     return firstJob;
@@ -76,9 +84,18 @@ class JobList extends Phaser.Plugin {
      @param {Job} job - the job to add back to the list
    */
   returnJob (job) {
-    // only add the job if it's not complete
-    if (!job.complete) {
-      this.list.push(job);
+    job.numWorkers -= 1;
+  }
+
+  /**
+     Remove Job
+     Removes a job from the list
+     @param {Job} job - the job to remove
+   */
+  removeJob (job) {
+    let index = this.list.indexOf(job)
+    if (index > -1) {
+      this.list.splice(index, 1);
     }
   }
 
@@ -90,44 +107,6 @@ class JobList extends Phaser.Plugin {
   size () {
     return this.list.length;
   }
-
-  /**
-     Highlight
-     Highlight the blocks provided with the given color.
-
-     @param {array} blocks - the blocks to highlight
-     @param {string|number} color - the color to highlight in
-     @return {Phaser.Graphics} the graphics object that was created
-  */
-  /*
-  highlight (blocks, color) {
-    if (!Array.isArray(blocks)) {
-      blocks = [blocks];
-    }
-
-    // get the top leftmost block
-    let topLeft = blocks.reduce((tl, block) => {
-      if (block.x <= tl.x && block.y <= tl.y) {
-        return block;
-      }
-      return tl;
-    }, blocks[0]);
-
-    // anchor at the top left most block
-    let g = this.game.add.graphics(topLeft.worldX, topLeft.worldY);
-    g.lineStyle(0, color, this.hlAlpha);
-    g.beginFill(color, this.hlAlpha);
-    blocks.forEach((block) => {
-      let x = (block.x - topLeft.x) * block.width;
-      let y = (block.y - topLeft.y) * block.height;
-      g.drawRect(x, y, block.width, block.height);
-    });
-
-    g.endFill();
-
-    return g;
-  }
-  */
 }
 
 class Job {
@@ -137,7 +116,8 @@ class Job {
     this.game         = this.parent.game;
     this.type         = options.type        || 'general';
     this.name         = options.name        || 'idle';
-    this.numWorkers   = options.numWorkers  || 1;
+    this.numWorkers   = 0;
+    this.numTasks     = 0;
     this.maxWorkers   = options.maxWorkers  || 1;
     this.tools        = options.tools       || [];
     this.increment    = options.increment   || 1;
@@ -151,14 +131,70 @@ class Job {
     this.duration     = 0;
     this.highlight    = null;
 
+    this.emitters     = [];
+
     this.blocks = new Map();
     options.blocks.forEach((block) => {
-      this.blocks.set(block, {
-        progress: 0,
-        started: false,
-        complete: false
-      });
+      // if the block is not already involved in
+      // another job, add it to the blocks map
+      if (!this.parent.list.some((job) => {
+        return job.blocks.has(block);
+      })) {
+        this.numTasks += 1;
+        this.blocks.set(block, {
+          progress: 0,
+          claimed: false,
+          started: false,
+          complete: false,
+          emitter: null
+        });
+      }
     });
+  }
+
+  /**
+     Claim
+     Claim a task so that it can be worked on exclusively
+     by 1 mob.
+     @param {Block} block - the block to claim
+   */
+  claimTask (block) {
+    let task = this.blocks.get(block);
+    if (task && !task.claimed) {
+      this.numTasks -= 1;
+      task.claimed = true;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+     Get Emitter
+     Get the first available emitter or create
+     a new one if none are available.
+   */
+  getEmitter () {
+    let emitter;
+    // get the first dead emitter
+    this.emitters.some((em) => {
+      if (!em.alive) {
+        console.log('found dead emitter')
+        emitter = em;
+        // wake it up
+        emitter.revive();
+        return true;
+      }
+      return false;
+    });
+
+    if (!emitter){
+      console.log('creating new emitter')
+      // create a new one and add to the pool
+      emitter = this.game.add.emitter(0, 0);
+      this.emitters.push(emitter);
+    }
+
+    return emitter;
   }
 
   /**
@@ -232,11 +268,14 @@ class Job {
       this.complete = true;
       this.end = new Date().getTime();
       this.duration = this.end - this.start;
+      // clean up any emitters that may have been created
+      this.emitters.forEach((em) => {
+        em.kill();
+        em.destroy();
+      });
+      this.emitters = [];
       // TODO: add job management on JobList to record history and take
       // care of clean up
-      // clean up graphics
-      //this.graphics.destroy();
-
     }
     else if (!this.started) {
       console.warn('This job has not been started yet', this.type, this.name);
@@ -260,9 +299,10 @@ class Job {
     let start = this.parent.level.blockAt(x, y);
 
     let blocks = Array.from(this.blocks.entries());
-    // eliminate blocks that are complete
+
+    // eliminate blocks that are claimed or complete
     blocks = blocks.map((entry) => {
-      if (entry[1].complete) {
+      if (entry[1].claimed || entry[1].complete) {
         return undefined;
       }
       return entry[0];
@@ -285,7 +325,7 @@ class Job {
       return { success: false, path: [], destination: null };
     }
 
-    // get its passable neighbours
+    // get its passable neighbours, these are the positions where we can work from
     blocks = blocks.reduce((all, block) => {
       let neighbs = this.parent.level.getBlockSurroundings(block, true, false).filter((t) => {
         return this.parent.level.isPassable(t.x, t.y);
@@ -333,9 +373,9 @@ class Job {
     let neighbs = this.parent.level.getBlockSurroundings(block, true, false);
     // blocks in the job
     let jobBlocks = Array.from(this.blocks.entries());
-    // eliminate blocks that are complete
+    // eliminate blocks that are claimed or complete
     jobBlocks = jobBlocks.map((entry) => {
-      if (entry[1].complete) {
+      if (entry[1].claimed || entry[1].complete) {
         return undefined;
       }
       return entry[0];

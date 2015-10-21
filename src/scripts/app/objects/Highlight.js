@@ -35,10 +35,7 @@ class Highlight extends Phaser.Graphics {
      @param {Block} block - the block to clear
    */
   clearBlock (block) {
-    console.log('clearBlock')
-    console.log('checking for', block, 'in', this.graphicsMap)
     if (this.graphicsMap.has(block)) {
-      console.log('graphicsMap has block')
       this.dirty = true;
       this.clearDirty = true;
 
@@ -49,7 +46,6 @@ class Highlight extends Phaser.Graphics {
       let index;
       this.graphicsData.some((b, i) => {
         if (b === data) {
-          console.log('found block')
           index = i;
           return true;
         }
@@ -58,7 +54,6 @@ class Highlight extends Phaser.Graphics {
 
       // remove the data
       if (index !== undefined) {
-        console.log('cleared block')
         this.graphicsData.splice(index, 1);
       }
     }

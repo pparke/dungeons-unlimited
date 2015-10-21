@@ -107,6 +107,11 @@ export default {
       textureURL: 'img/GUI.png',
       atlasURL: 'atlas/GUI.json',
       atlasData: null
+    },
+    {
+      key: 'infoPane',
+      type: 'image',
+      url: 'img/infoPane.png'
     }
   ],
 

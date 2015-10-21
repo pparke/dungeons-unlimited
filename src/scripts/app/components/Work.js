@@ -77,8 +77,7 @@ class Work extends Base {
      this.publish('walk', search.path, search.destination, 'arrived');
    }
    else {
-     console.log('No path to job');
-     console.log('job', job)
+     console.log('No path to job', job);
      this.jobList.returnJob(job);
      this.currentJob = null;
      this.target.changeState('idle');
@@ -91,7 +90,6 @@ class Work extends Base {
     Change state to work and begin the job.
   */
  arrivedAtJob () {
-   console.log('arrived at job')
    this.target.changeState('work');
    // if the job hasn't been started, start it
    if (!this.currentJob.started) {
@@ -110,7 +108,7 @@ class Work extends Base {
    // get the first accessible tile in the job
    let block = this.currentJob.touching(this.target.x, this.target.y)[0];
 
-   if (block) {
+   if (block && this.currentJob.claimTask(block)) {
      this.workingBlock = block;
    }
    // if there is no tile within range
@@ -149,6 +147,9 @@ class Work extends Base {
     }
     else if (this.currentJob.complete) {
       console.log('Job Complete');
+      this.jobList.removeJob(this.currentJob);
+      this.currentJob = null;
+      this.working = false;
       this.target.changeState('idle');
     }
   }

@@ -81,6 +81,14 @@ class Mobile extends Phaser.Sprite {
     this.states[this.currentState].enter(this, ...args);
   }
 
+  /**
+     Get Rect
+     Gets a rectangle describing the current position of the mob.
+   */
+  getRect () {
+    return new Phaser.Rectangle(this.x, this.y, this.width, this.height);
+  }
+
 
   /**
      Update

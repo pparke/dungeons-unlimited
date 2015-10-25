@@ -7,10 +7,11 @@ import Menu       from './Menu';
 import InfoPane   from './InfoPane';
 
 class Controls {
-  constructor (game, level, jobList, ...args) {
+  constructor (game, level, jobList, denizens, ...args) {
     this.game     = game;
     this.level    = level;
     this.jobList  = jobList;
+    this.denizens = denizens;
 
     // add the selection graphics
     this.selection = new SelectBox(this.game, 0, 0);
@@ -75,38 +76,6 @@ class Controls {
   }
 
   /**
-     Setup Mouse
-   */
-  setupMouse () {
-    this.game.input.onDown.add(function (pointer, mouseEvent) {
-      if (this.menu.open) {
-        if (pointer.leftButton.isDown) {
-          this.menu.hideMenu();
-        }
-        else if (pointer.rightButton.isDown) {
-        }
-      }
-      else {
-        if (pointer.leftButton.isDown && pointer.rightButton.isUp) {
-          // call the clicked event on the select box to begin
-          // the selection process
-          this.selection.clicked(pointer);
-        }
-        else if (pointer.leftButton.isDown && pointer.rightButton.isDown) {
-          this.selection.cancel();
-        }
-        else if (pointer.rightButton.isDown) {
-          this.menu.showMenu(pointer.worldX, pointer.worldY);
-        }
-      }
-    }, this);
-
-    // add handler for when the select box detects that the mouse
-    // has been released and the selection is complete
-    this.selection.events.onReleased.add( this.onReleased, this);
-  }
-
-  /**
      Setup Menu
      Set up the right click menu
    */
@@ -127,12 +96,52 @@ class Controls {
   }
 
   /**
+     Setup Mouse
+   */
+  setupMouse () {
+    this.game.input.onDown.add(function (pointer, mouseEvent) {
+      if (this.menu.open) {
+        if (pointer.leftButton.isDown) {
+          this.menu.hideMenu();
+        }
+        else if (pointer.rightButton.isDown) {
+        }
+      }
+      else {
+        if (pointer.leftButton.isDown && pointer.rightButton.isUp) {
+          // call the clicked event on the select box to begin
+          // the selection process
+          if (this.selectionMode === 'info') {
+            this.selection.clicked(pointer, { width: 16, height: 16 });
+          }
+          else {
+            this.selection.clicked(pointer);
+          }
+        }
+        else if (pointer.leftButton.isDown && pointer.rightButton.isDown) {
+          this.selection.cancel();
+        }
+        else if (pointer.rightButton.isDown) {
+          this.menu.showMenu(pointer.worldX, pointer.worldY);
+        }
+      }
+    }, this);
+
+    // add handler for when the select box detects that the mouse
+    // has been released and the selection is complete
+    this.selection.events.onReleased.add( this.onReleased, this);
+  }
+
+  /**
      On Released
      The callback that handles the release event from the mouse
      @param {Phaser.Rectangle} rect - the selected area
    */
   onReleased (rect) {
-    let blocks = this.level.getBlocks(rect.x, rect.y, rect.width, rect.height);
+    let blocks  = this.level.getBlocks(rect.x, rect.y, rect.width, rect.height);
+    let mobs    = this.denizens.getMobs(this.level.getWorldRect(rect));
+
+    console.log('mobs', mobs)
 
     if (blocks.length === 0) {
       return;
@@ -140,11 +149,11 @@ class Controls {
 
     switch (this.selectionMode) {
     case 'job':
-      this.assignJob(blocks);
+      this.assignJob(blocks, mobs);
       break;
 
     case 'info':
-      this.getInfo(blocks);
+      this.getInfo(blocks, mobs);
       break;
     }
   }
@@ -153,22 +162,32 @@ class Controls {
      Assign Job
      Add a job command to the job list.
      @param {array} blocks - the array of blocks to apply the job to
+     @param {array} mobs - the array of mobs to apply the job to
    */
-  assignJob (blocks) {
+  assignJob (blocks, mobs) {
     let command = this.jobCommands[this.jobCommand];
-    command.blocks = blocks;
-    let job = this.jobList.addJob(command);
+    // filter blocks based on job requirements
+    command.blocks = blocks.filter(command.test);
+    // only add job if there are blocks to work on
+    if (command.blocks.length > 0) {
+      let job = this.jobList.addJob(command);
+    }
   }
 
   /**
      Get Info
      Get information about the selected blocks.
      @param {array} blocks - the array of blocks to examine
+     @param {array} mobs - the array of mobs to examine
    */
-  getInfo (blocks) {
+  getInfo (blocks, mobs) {
+    this.infoPane.setDetails({
+      name: blocks[0].name,
+      position: `${blocks[0].x} ${blocks[0].y}`
+    });
     this.infoPane.showPane();
     blocks.forEach((block) => {
-      console.log(this.level.getBlock(block.x, block.y));
+      console.log(this.level.getBlock(block.x, block.y).getWall());
     });
   }
 
@@ -239,6 +258,14 @@ var jobCommands = {
         //this.emitter.destroy();
         this.parent.level.removeWall(block.x, block.y, 1, 1, 'walls', true);
       }
+    },
+
+    test (block) {
+      let wall = block.getWall();
+      if (wall.index > -1) {
+        return true;
+      }
+      return false;
     }
   },
 
@@ -267,6 +294,14 @@ var jobCommands = {
         this.emitter.destroy();
         console.log(this.parent.level.addWall(block.x, block.y, 1, 1));
       }
+    },
+
+    test (block) {
+      let wall = block.getWall();
+      if (wall.index === -1) {
+        return true;
+      }
+      return false;
     }
   }
 };

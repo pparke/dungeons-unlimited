@@ -197,6 +197,24 @@ class Level extends Phaser.Tilemap {
    }
 
    /**
+      Get Grid Pos
+      Get the position of the point in grid units
+      @param {Phaser.Point} point - the point to modify
+   */
+   getGridPos (point) {
+     return new Phaser.Point(Phaser.Math.snapToFloor(point.x, this.tileWidth), Phaser.Math.snapToFloor(point.y, this.tileHeight));
+   }
+
+   /**
+      Get World Rect
+      Convert a rect in grid units to world units.
+      @param {Phaser.Rectangle} rect - the rect to convert
+    */
+   getWorldRect (rect) {
+     return new Phaser.Rectangle(rect.x * this.tileWidth, rect.y * this.tileHeight, rect.width * this.tileWidth, rect.height * this.tileHeight);
+   }
+
+   /**
      Update Collision Bodies
      Update all of the collision settings for the tiles based
      on the stored collision indices for the tilemap and

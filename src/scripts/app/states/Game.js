@@ -12,13 +12,14 @@ import JobList    from '../plugins/JobList';
 import Work       from '../components/Work';
 import Walk       from '../components/Walk';
 import Controls   from '../objects/Controls';
+import Denizens   from '../objects/Denizens';
 
 export default class Game extends Phaser.State {
 
   init () {
     this.level      = null;
     this.player     = null;
-    this.workers    = null;
+    this.denizens   = null;
     this.jobList    = null;
     this.astar      = null;
   }
@@ -40,6 +41,8 @@ export default class Game extends Phaser.State {
     this.astar = new AStar(this.game, this, this.level);
     // create the job list
     this.jobList = new JobList(this.game, this, this.astar, this.level);
+    // create the denizen list
+    this.denizens = new Denizens(this.game);
 
     // make sure objects in collison groups will collide
     // with the world boundaries
@@ -52,7 +55,7 @@ export default class Game extends Phaser.State {
     this.setupWorkers();
 
     // setup controls manager
-    this.controls = new Controls(this.game, this.level, this.jobList);
+    this.controls = new Controls(this.game, this.level, this.jobList, this.denizens);
 
   }
 
@@ -128,9 +131,6 @@ export default class Game extends Phaser.State {
      Setup Workers
    */
   setupWorkers () {
-    this.workers = this.game.add.group();
-    this.workers.enableBody = true;
-    this.workers.physicsBodyType = Phaser.Physics.P2JS;
 
     for (let i = 0; i < 4; i++) {
       let worker = new Worker(this.game, this.level.centerX*16-24, this.level.centerY*16+(16*i), 'player1', 'down0000');
@@ -149,7 +149,7 @@ export default class Game extends Phaser.State {
       worker.changeState('idle');
       //worker.body.setCollisionGroup(this.workerCollisionGroup);
       //worker.body.collides([ this.level.collisionGroup, this.playerCollisionGroup, this.workerCollisionGroup ]);
-      this.workers.add(worker);
+      this.denizens.addTo(worker, 'workers');
     }
   }
 

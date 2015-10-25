@@ -5,6 +5,10 @@
 // TODO: Change select box to snap to grid of same size as tiles
 // and then run hit test on each of the grid squares to look for
 // a tile
+
+let snapToFloor = Phaser.Math.snapToFloor;
+let snapToCeil  = Phaser.Math.snapToCeil;
+
 class SelectBox extends Phaser.Graphics {
 
   constructor (game, ... args) {
@@ -14,9 +18,11 @@ class SelectBox extends Phaser.Graphics {
     this.begin      = { x: 0, y: 0 };
     this.size       = { width: 0, height: 0 };
     this.grid       = { width: 16, height: 16 };
+    this.lastPos    = { x: 0, y: 0 };
     this.color      = 0x00FF00;
     this.stroke     = 2;
     this.alpha      = 1;
+    this.fixed      = false;
 
     this.lineStyle(this.stroke, this.color, this.alpha);
     this.events.onReleased = new Phaser.Signal();
@@ -32,44 +38,92 @@ class SelectBox extends Phaser.Graphics {
     if (this.selecting) {
       let pointer = this.game.input.activePointer;
       if (pointer.isDown) {
-        // snap the position to the grid
-        let x = Math.ceil(pointer.worldX / this.grid.width) * this.grid.width;
-        let y = Math.ceil(pointer.worldY / this.grid.height) * this.grid.height;
-        // calculate the current width and height
-        let width = Math.abs(x - this.begin.x);
-        let height = Math.abs(y - this.begin.y);
-        // only redraw the rect if the pointer position has changed
-        if (width !== this.size.width || height !== this.size.height) {
 
 
-          // reset the graphics and style
-          this.reset();
+        if (this.fixed) {
+          let x = snapToFloor(pointer.worldX, this.grid.width);
+          let y = snapToFloor(pointer.worldY, this.grid.height);
+          // only redraw the rect if the pointer position has changed
+          if (x !== this.lastPos.x || y !== this.lastPos.y) {
+            this.lastPos.x = x;
+            this.lastPos.y = y;
+            // reset the graphics and style
+            this.reset();
+            x = x - snapToFloor(this.size.width/2, this.grid.width);
+            y = y - snapToFloor(this.size.height/2, this.grid.height);
 
-          let topleft = { x: this.begin.x, y: this.begin.y };
-          // account for selection to the left and/or upwards
+            this.begin.x = x;
+            this.begin.y = y;
+
+            this.drawRect(x, y, this.size.width, this.size.height);
+          }
+        }
+        else {
+          let x, y, width, height;
+
+          // determine the current x and y
+          // calculate the current width and height
           if (pointer.worldX < this.begin.x) {
-            topleft.x = this.begin.x - width;
+            x = snapToFloor(pointer.worldX, this.grid.width);
+            width = this.begin.x - x;
+          }
+          else {
+            x = snapToCeil(pointer.worldX, this.grid.width);
+            width = x - this.begin.x;
           }
           if (pointer.worldY < this.begin.y) {
-            topleft.y = this.begin.y - height;
+            y = snapToFloor(pointer.worldY, this.grid.height);
+            height = this.begin.y - y;
+          }
+          else {
+            y = snapToCeil(pointer.worldY, this.grid.height);
+            height = y - this.begin.y;
           }
 
-          // update width and height
-          this.size.width = width;
-          this.size.height = height;
+          // make sure that width and height are at least 1 grid block
+          width = width || this.grid.width;
+          height = height || this.grid.height;
 
-          this.drawRect(topleft.x, topleft.y, width, height);
+          // only redraw the rect if the pointer position has changed
+          if (x !== this.lastPos.x || y !== this.lastPos.y) {
+            this.lastPos.x = x;
+            this.lastPos.y = y;
+            // reset the graphics and style
+            this.reset();
+
+            let topleft = { x: this.begin.x, y: this.begin.y };
+
+            // account for selection to the left and/or upwards
+            if (pointer.worldX < this.begin.x) {
+              topleft.x = this.begin.x - width;
+              width += this.grid.width;
+            }
+            if (pointer.worldY < this.begin.y) {
+              topleft.y = this.begin.y - height;
+              height += this.grid.height;
+            }
+
+            // update width and height
+            this.size.width = width;
+            this.size.height = height;
+
+            this.drawRect(topleft.x, topleft.y, this.size.width, this.size.height);
+          }
         }
-
       }
       else {
-        // account for selection to the left and/or upwards
-        if (pointer.worldX < this.begin.x) {
-          this.begin.x = this.begin.x - this.size.width;
+        if (!this.fixed) {
+          // account for selection to the left and/or upwards
+          if (pointer.worldX < this.begin.x) {
+            this.begin.x = this.begin.x - this.size.width;
+            this.begin.x += this.grid.width;
+          }
+          if (pointer.worldY < this.begin.y) {
+            this.begin.y = this.begin.y - this.size.height;
+            this.begin.y += this.grid.height;
+          }
         }
-        if (pointer.worldY < this.begin.y) {
-          this.begin.y = this.begin.y - this.size.height;
-        }
+
         this.reset();
         this.selecting = false;
         // return the rectangle selected
@@ -91,13 +145,24 @@ class SelectBox extends Phaser.Graphics {
      Clicked
      Begin the selection process and set the beginning coords of the box
   */
-  clicked (pointer) {
+  clicked (pointer, size) {
     if (!this.selecting) {
       this.selecting = true;
 
       // snap to grid
-      this.begin.x = Math.floor(pointer.worldX / this.grid.width) * this.grid.width;
-      this.begin.y = Math.floor(pointer.worldY / this.grid.height) * this.grid.height;
+      this.begin.x        = snapToFloor(pointer.worldX, this.grid.width);
+      this.begin.y        = snapToFloor(pointer.worldY, this.grid.height);
+
+      if (size) {
+        this.fixed        = true;
+        this.size.width   = size.width;
+        this.size.height  = size.height;
+      }
+      else {
+        this.fixed        = false;
+        this.size.width   = 1;
+        this.size.height  = 1;
+      }
     }
   }
 

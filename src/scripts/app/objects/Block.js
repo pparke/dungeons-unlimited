@@ -10,7 +10,7 @@ class Block {
   constructor (game, level, x, y, ...args) {
     this.game     = game;
     this.level    = level;
-    this.name     = `${x}-${y}`;
+    this.name     = 'Block';
     this.x        = x;
     this.y        = y;
     this.width    = this.level.tileWidth;

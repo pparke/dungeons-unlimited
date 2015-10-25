@@ -12,9 +12,9 @@ class InfoPane extends Phaser.Group {
     this.background = null;
 
     this.details = {
-      name: { label: null, x: 0.5, y: 0.05 },
-      position: { label: null, x: 0.15, y: 0.05 },
-      image: { label: null, x: 0.85, y: 0.05 }
+      position:   { label: null, x: 0.15, y: 0.05 },
+      name:       { label: null, x: 0.5,  y: 0.05 },
+      blockType:  { label: null, x: 0.85, y: 0.05 },
     };
 
     // font settings
@@ -48,6 +48,10 @@ class InfoPane extends Phaser.Group {
       let value = this.details[key];
       this.createText(key, key, value.x, value.y);
     }
+  }
+
+  setupButtons () {
+    // TODO: add close button and others, separate createButton from Menu so it can be used here
   }
 
   createText (key, text, centerX, centerY) {

@@ -133,7 +133,9 @@ export default class Game extends Phaser.State {
   setupWorkers () {
 
     for (let i = 0; i < 4; i++) {
-      let worker = new Worker(this.game, this.level.centerX*16-24, this.level.centerY*16+(16*i), 'player1', 'down0000');
+      let x = this.level.centerX * 16 - 24;
+      let y = this.level.centerY * 16 + (i*16) + 8;
+      let worker = new Worker(this.game, x, y, 'player1', 'down0000');
       this.game.world.addAt(worker, 2);
       worker.anchor.setTo(0.5, 0.5);
       worker.animations.add('left-idle',   [ 'left0000', 'left0001' ], 2, true);

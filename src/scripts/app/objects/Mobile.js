@@ -1,6 +1,7 @@
 /*
  * Mobile
  */
+import NameGen from '../util/NameGen';
 
 class Mobile extends Phaser.Sprite {
 
@@ -19,6 +20,8 @@ class Mobile extends Phaser.Sprite {
     this.currentState   = null;
     this.states         = {};
     this.components     = {};
+
+    this.name = new NameGen().male().short().generate();
 
     //this.setupPhysics();
   }

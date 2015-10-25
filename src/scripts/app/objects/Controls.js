@@ -153,7 +153,7 @@ class Controls {
       break;
 
     case 'info':
-      this.getInfo(blocks, mobs);
+      this.getInfo(blocks[0], mobs[0]);
       break;
     }
   }
@@ -177,18 +177,17 @@ class Controls {
   /**
      Get Info
      Get information about the selected blocks.
-     @param {array} blocks - the array of blocks to examine
-     @param {array} mobs - the array of mobs to examine
+     @param {Block} block - the block to examine
+     @param {Mobile} mob - the mob to examine
    */
-  getInfo (blocks, mobs) {
+  getInfo (block={}, mob={}) {
     this.infoPane.setDetails({
-      name: blocks[0].name,
-      position: `${blocks[0].x} ${blocks[0].y}`
+      name:       mob.name || '',
+      blockType:  block.name || '',
+      position:   `${block.x} ${block.y}`
     });
     this.infoPane.showPane();
-    blocks.forEach((block) => {
-      console.log(this.level.getBlock(block.x, block.y).getWall());
-    });
+    console.log(this.level.getBlock(block.x, block.y).getWall());
   }
 
   /**

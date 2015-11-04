@@ -43,11 +43,6 @@ export default {
       url: 'img/floors.png'
     },
     {
-      key: 'objects',
-      type: 'image',
-      url: 'img/objects.png'
-    },
-    {
       key: 'walls',
       type: 'image',
       url: 'img/walls.png'
@@ -109,9 +104,28 @@ export default {
       atlasData: null
     },
     {
-      key: 'infoPane',
+      key: 'sidebar',
       type: 'image',
       url: 'img/infoPane.png'
+    },
+    {
+      key: 'meterPane',
+      type: 'image',
+      url: 'img/meterPane.png'
+    },
+    {
+      type: 'atlasJSONArray',
+      key: 'objects',
+      textureURL: 'img/objects.png',
+      atlasURL: 'atlas/objects.json',
+      atlasData: null
+    },
+    {
+      type: 'atlasJSONArray',
+      key: 'meters',
+      textureURL: 'img/meters.png',
+      atlasURL: 'atlas/meters.json',
+      atlasData: null
     }
   ],
 

@@ -19,23 +19,24 @@ class Block {
     this.worldY   = y * this.level.tileHeight;
     this.middleX  = this.worldX + this.level.tileWidth / 2;
     this.middleY  = this.worldY + this.level.tileHeight / 2;
-    this.objects  = [];
+    this.mineral  = 'stone';
+    this.items  = [];
     this.medium   = {
       type: 'air',
       volume: 10
-    }
+    };
   }
 
-  getFloor () {
-    return this.level.getTile(this.x, this.y, 'floors', true);
+  static getFloor (block) {
+    return block.level.getTile(block.x, block.y, 'floors', true);
   }
 
-  getWall () {
-    return this.level.getTile(this.x, this.y, 'walls', true);
+  static getWall (block) {
+    return block.level.getTile(block.x, block.y, 'walls', true);
   }
 
-  passable () {
-    return this.getWall().index === -1;
+  static isPassable (block) {
+    return Block.getWall(block).index === -1;
   }
 }
 

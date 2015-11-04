@@ -13,6 +13,7 @@ import Work       from '../components/Work';
 import Walk       from '../components/Walk';
 import Controls   from '../objects/Controls';
 import Denizens   from '../objects/Denizens';
+import Attributes from '../components/Attributes';
 
 export default class Game extends Phaser.State {
 
@@ -25,6 +26,10 @@ export default class Game extends Phaser.State {
   }
 
   create () {
+    // setup the random data generator
+    this.game.randomData = new Phaser.RandomDataGenerator(['374847367262647']);
+    this.game.randomData.sow(new Array(20).fill((Math.random()*100000) + 100));
+
     // make sure pixels appear sharp
     this.game.stage.smoothed = false;
     this.game.physics.startSystem(Phaser.Physics.P2JS);
@@ -36,6 +41,8 @@ export default class Game extends Phaser.State {
 
     // setup the level
     this.setupLevel();
+
+    this.game.camera.focusOnXY(this.world.centerX, this.world.centerY);
 
     // create the pathfinding object
     this.astar = new AStar(this.game, this, this.level);
@@ -77,7 +84,7 @@ export default class Game extends Phaser.State {
    */
   setupLevel () {
     console.log('creating level');
-    this.level = new Level(this.game, null, 16, 16, 64, 64);
+    this.level = new Level(this.game, null, 16, 16, 128, 128);
 
     this.level.addTileset('floors', 'floors', 'floorKeys');
     //this.level.addTileset('objects', 'objects', 'objectKeys');
@@ -148,6 +155,7 @@ export default class Game extends Phaser.State {
       worker.animations.add('down-walk',   [ 'down0002', 'down0003' ], 4, true);
       worker.addComponent(new Work(this.game, this.jobList));
       worker.addComponent(new Walk(this.game, this.level));
+      worker.addComponent(new Attributes(this.game, ['strength', 'intelligence', 'wisdom', 'dexterity', 'constitution', 'charisma']));
       worker.changeState('idle');
       //worker.body.setCollisionGroup(this.workerCollisionGroup);
       //worker.body.collides([ this.level.collisionGroup, this.playerCollisionGroup, this.workerCollisionGroup ]);

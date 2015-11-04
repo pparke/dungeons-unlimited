@@ -133,6 +133,8 @@ class Job {
 
     this.emitters     = [];
 
+    this.items        = options.items || [];
+
     this.blocks = new Map();
     options.blocks.forEach((block) => {
       // if the block is not already involved in

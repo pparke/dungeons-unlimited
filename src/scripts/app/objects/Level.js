@@ -2,6 +2,7 @@
  * Level
  */
 import Block from './Block';
+import Item  from './Item';
 
 class Level extends Phaser.Tilemap {
 
@@ -10,8 +11,12 @@ class Level extends Phaser.Tilemap {
 
     this.blocks = [];
 
+    // center of the level in tile units
     this.centerX = this.width/2;
     this.centerY = this.height/2;
+    // width and height of the displayed area of the level (viewport)
+    this.displayWidth = 640;
+    this.displayHeight = 480;
 
     let floors = this.create('floors', this.width, this.height, this.tileWidth, this.tileHeight);
     //this.createBlankLayer('objects', this.width, this.height, this.tileWidth, this.tileHeight);
@@ -23,6 +28,9 @@ class Level extends Phaser.Tilemap {
     this.setLayer('floors');
 
     floors.resizeWorld();
+    // set the size of the world to account for the extra space given over
+    // to the ui elements on the right and bottom.
+    this.game.world.resize(this.widthInPixels + (this.game.width-floors.width), this.heightInPixels + (this.game.height-floors.height));
 
     this.tileNames = new Map();
     this.collisionIndexes = [];
@@ -75,7 +83,7 @@ class Level extends Phaser.Tilemap {
    */
   isPassable (x, y) {
     //return this.getTile(x, y, 'walls', true).index === -1;
-    return this.getBlock(x, y).passable();
+    return Block.isPassable(this.getBlock(x, y));
   }
 
   /**
@@ -92,7 +100,8 @@ class Level extends Phaser.Tilemap {
     let blocks = this.getBlockSurroundings(block, true, false);
     // test if any of the surrounding blocks are passable
     return blocks.some((block) => {
-      return this.isPassable(block.x, block.y);
+      return Block.isPassable(block);
+      //return this.isPassable(block.x, block.y);
     });
   }
 
@@ -167,7 +176,7 @@ class Level extends Phaser.Tilemap {
    permuteKey (key) {
      let q = key.indexOf('?');
      if (q === -1) {
-       return [key];
+       return [ key ];
      }
      let keys = [];
      // add keys with the ? replaced with both e and w recursively
@@ -282,7 +291,7 @@ class Level extends Phaser.Tilemap {
     // fill the specified area with solid wall
     let tileIndex = this.getTileIndex(key);
     blocks.forEach((block) => {
-      block.getFloor().index = tileIndex;
+      Block.getFloor(block).index = tileIndex;
       // update all of the changed and surrounding tile indices
       let surroundings = this.getBlockSurroundings(block, true, false);
       surroundings.forEach((b) => {
@@ -306,7 +315,7 @@ class Level extends Phaser.Tilemap {
     // fill the specified area with solid wall
     let tileIndex = this.getTileIndex('w,w,w|w,w,w|w,w,w');
     blocks.forEach((block) => {
-      block.getWall().index = tileIndex;
+      Block.getWall(block).index = tileIndex;
       this.getLayerObject('walls').dirty = true;
     });
 
@@ -384,7 +393,7 @@ class Level extends Phaser.Tilemap {
         if (!b) {
           return 'e';
         }
-        return b.getWall().index > -1 ? 'w' : 'e';
+        return Block.getWall(b).index > -1 ? 'w' : 'e';
       }).join(',');
     }).join('|');
     let index = this.getTileIndex(key);
@@ -392,10 +401,31 @@ class Level extends Phaser.Tilemap {
       console.log('index is undefined', index, this);
     }
     else {
-      block.getWall().index = index;
+      Block.getWall(block).index = index;
     }
 
     return block;
+  }
+
+  /**
+     Place Items
+     Add items to a block.
+     @param {Block} block - the block to add the objects to
+     @param {array} items - the items to add
+   */
+  placeItems (block, items) {
+    if (!Array.isArray(items)) {
+      items = [items];
+    }
+    items.forEach((item) => {
+      if (!(item instanceof Item)) {
+        let instance = new Item(this.game, 0, 0, item.key, item.frame);
+        instance.setup(item);
+        this.game.world.addAt(instance, 2);
+        item = instance;
+      }
+      Item.place(item, block);
+    });
   }
 
   /**
@@ -425,14 +455,12 @@ class Level extends Phaser.Tilemap {
     if (layerKey) {
       if (removeType === undefined) { removeType = -1; }
       blocks = blocks.filter((block) => {
-        return block.getWall().index !== removeType;
+        return Block.getWall(block).index !== removeType;
       });
     }
 
     return blocks;
   }
-
-
 
   /**
      Get Block Surroundings
@@ -447,7 +475,7 @@ class Level extends Phaser.Tilemap {
         return [];
       }
       else {
-        return [[],[],[]];
+        return [ [],[],[] ];
       };
     }
     let blocks = [];
@@ -618,6 +646,73 @@ class Level extends Phaser.Tilemap {
 
       return layer.bodies;
     }
+
+/**
+  * Creates a new and empty layer on this Tilemap. By default TilemapLayers are fixed to the camera.
+  *
+  * @method Phaser.Tilemap#createBlankLayer
+  * @param {string} name - The name of this layer. Must be unique within the map.
+  * @param {number} width - The width of the layer in tiles.
+  * @param {number} height - The height of the layer in tiles.
+  * @param {number} tileWidth - The width of the tiles the layer uses for calculations.
+  * @param {number} tileHeight - The height of the tiles the layer uses for calculations.
+  * @param {Phaser.Group} [group] - Optional Group to add the layer to. If not specified it will be added to the World group.
+  * @return {Phaser.TilemapLayer} The TilemapLayer object. This is an extension of Phaser.Image and can be moved around the display list accordingly.
+  */
+  createBlankLayer (name, width, height, tileWidth, tileHeight, group) {
+    if (group === undefined) { group = this.game.world; }
+
+    if (this.getLayerIndex(name) !== null) {
+      console.warn('Tilemap.createBlankLayer: Layer with matching name already exists');
+      return;
+    }
+
+    let layer = {
+      name:           name,
+      x:              0,
+      y:              0,
+      width:          width,
+      height:         height,
+      widthInPixels:  width * tileWidth,
+      heightInPixels: height * tileHeight,
+      alpha:          1,
+      visible:        true,
+      properties:     {},
+      indexes:        [],
+      callbacks:      [],
+      bodies:         [],
+      data:           null
+    };
+
+    let data = Array.from(new Array(height), (row, y) => {
+      return Array.from(new Array(width), (col, x) => {
+        return new Phaser.Tile(layer, -1, x, y, tileWidth, tileHeight)
+      });
+    });
+
+    layer.data = data;
+
+    this.layers.push(layer);
+
+    this.currentLayer = this.layers.length - 1;
+
+    var w = this.displayWidth   || layer.widthInPixels;
+    var h = this.displayHeight  || layer.heightInPixels;
+
+    if (w > this.game.width) {
+      w = this.game.width;
+    }
+
+    if (h > this.game.height) {
+      h = this.game.height;
+    }
+
+    var output = new Phaser.TilemapLayer(this.game, this, this.layers.length - 1, w, h);
+    output.name = name;
+
+    return group.add(output);
+
+  }
 
 }
 

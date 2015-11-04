@@ -39,6 +39,7 @@ class Base {
   /**
      Add Event
      Add a new event to the target if it doesn't already exist.
+     @param {string} event - the event name to add
    */
   addEvent (event) {
     if (!this.target.events.hasOwnProperty(event)) {

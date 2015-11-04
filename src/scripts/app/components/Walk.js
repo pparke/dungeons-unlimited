@@ -26,11 +26,12 @@ class Walk extends Base {
     @override
   */
  afterTarget () {
+   // add events
    this.addEvent('walk');
    this.addEvent('step');
    // listen for walk events
    this.subscribe('walk', this.walkPath, this);
-   this.subscribe('step', this.stepForward, this);
+   this.subscribe('step', this.stepForward, this);   
  }
 
  /**
@@ -54,8 +55,7 @@ class Walk extends Base {
 
  /**
     Step Forward
-    Increments the step and starts the next movement, also sets recursive
-    callback if the end of the path has not been reached yet.
+    Increments the step and starts the next movement.
   */
  stepForward () {
    if (this.moving) {

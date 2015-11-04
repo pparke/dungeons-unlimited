@@ -4,7 +4,11 @@
 */
 import SelectBox  from './SelectBox';
 import Menu       from './Menu';
-import InfoPane   from './InfoPane';
+import Sidebar    from './sidebar/Sidebar';
+import Meters     from './Meters';
+import Block      from './Block';
+
+import * as jobCommands from '../commands/commands';
 
 class Controls {
   constructor (game, level, jobList, denizens, ...args) {
@@ -13,16 +17,25 @@ class Controls {
     this.jobList  = jobList;
     this.denizens = denizens;
 
+    this.tileArea = new Phaser.Rectangle(0, 0, this.level.displayWidth, this.level.displayHeight);
+
     // add the selection graphics
     this.selection = new SelectBox(this.game, 0, 0);
     this.game.add.existing(this.selection);
 
     this.selectionModes = [ 'job', 'info' ];
     this.selectionMode  = 'job';
+    this.currentItem    = 'pot';
     this.jobCommands    = jobCommands;
-    this.jobCommand     = 'dig';
+    this._jobCommand     = 'dig';
     this.menu           = new Menu(this.game);
-    this.infoPane       = new InfoPane(this.game);
+    this.sidebar        = new Sidebar(this.game);
+    this.meterPane      = new Meters(this.game);
+
+    this.meterPane.createMeter(0, 0, 'crazyGoat', 'Red');
+    this.meterPane.createMeter(0, 0, 'snake', 'Blue');
+    this.meterPane.createMeter(0, 0, 'eagle', 'Snot');
+    this.meterPane.createMeter(0, 0, 'ram', 'Blood');
 
     this.inputKeys = {
       w:      this.game.input.keyboard.addKey(Phaser.Keyboard.W),
@@ -52,6 +65,7 @@ class Controls {
 
     // setup the menu
     this.setupMenu();
+    this.setupSidebar();
     this.setupMouse();
   }
 
@@ -96,6 +110,85 @@ class Controls {
   }
 
   /**
+     Setup Sidebar
+   */
+  setupSidebar () {
+    let bgWidth = this.sidebar.background.width;
+    let bgHeight = this.sidebar.background.height;
+    let pane = this.sidebar.createPane('placeItems', {
+      lineSpacing: 16,
+      title:      { x: 0.5 * bgWidth, y: 0.05 * bgHeight },
+      items:      {
+        container: {
+          x: 0.05 * bgWidth,
+          y: 0.2 * bgHeight,
+          width: bgWidth,
+          height: bgHeight - 64
+        },
+        element: {
+          width: 32,
+          height: 32,
+          padding: 12,
+          buttonKey: 'inventory'
+        }
+      }
+    });
+
+    pane.setupItems([
+      {
+        name: 'pot',
+        action () {
+          console.log('clicked')
+        },
+        context: this,
+        key: 'objects',
+        frame: 'pot',
+        text: 'Pot'
+      },
+      {
+        name: 'chest',
+        action () {
+          console.log('clicked')
+        },
+        context: this,
+        key: 'objects',
+        frame: 'chest',
+        text: 'Chest'
+      },
+      {
+        name: 'goldLarge',
+        action () {
+          console.log('clicked')
+        },
+        context: this,
+        key: 'objects',
+        frame: 'goldLarge',
+        text: 'Gold'
+      },
+      {
+        name: 'gems',
+        action () {
+          console.log('clicked')
+        },
+        context: this,
+        key: 'objects',
+        frame: 'gems',
+        text: 'Gems'
+      },
+      {
+        name: 'sign',
+        action () {
+          console.log('clicked')
+        },
+        context: this,
+        key: 'objects',
+        frame: 'sign',
+        text: 'Sign'
+      }
+    ])
+  }
+
+  /**
      Setup Mouse
    */
   setupMouse () {
@@ -107,7 +200,8 @@ class Controls {
         else if (pointer.rightButton.isDown) {
         }
       }
-      else {
+      // if the click was within the tile area
+      else if (Phaser.Rectangle.containsPoint(this.tileArea, pointer.position)) {
         if (pointer.leftButton.isDown && pointer.rightButton.isUp) {
           // call the clicked event on the select box to begin
           // the selection process
@@ -159,6 +253,19 @@ class Controls {
   }
 
   /**
+     Set Job Command
+     Sets up the current job command and opens any required menus or ui elements.
+     @param {string} key - the command key as it appears in the jobCommands map
+   */
+  set jobCommand (key) {
+    this._jobCommand = key
+  }
+
+  get jobCommand () {
+    return this._jobCommand;
+  }
+
+  /**
      Assign Job
      Add a job command to the job list.
      @param {array} blocks - the array of blocks to apply the job to
@@ -168,6 +275,9 @@ class Controls {
     let command = this.jobCommands[this.jobCommand];
     // filter blocks based on job requirements
     command.blocks = blocks.filter(command.test);
+
+    // TODO: load contextual select menu in sidebar for jobs that need it
+
     // only add job if there are blocks to work on
     if (command.blocks.length > 0) {
       let job = this.jobList.addJob(command);
@@ -176,18 +286,19 @@ class Controls {
 
   /**
      Get Info
+     TODO: get working with new sidebar
      Get information about the selected blocks.
      @param {Block} block - the block to examine
      @param {Mobile} mob - the mob to examine
    */
   getInfo (block={}, mob={}) {
-    this.infoPane.setDetails({
+    this.sidebar.setDetails({
       name:       mob.name || '',
       blockType:  block.name || '',
-      position:   `${block.x} ${block.y}`
+      position:   `${block.x} ${block.y}`,
+      stats:      mob.attributes || {}
     });
-    this.infoPane.showPane();
-    console.log(this.level.getBlock(block.x, block.y).getWall());
+    console.log(Block.getWall(block));
   }
 
   /**
@@ -224,85 +335,5 @@ class Controls {
   }
 
 }
-
-var jobCommands = {
-  dig: {
-    type:       'general',
-    name:       'Dig',
-    blocks:     [],
-    increment:  10,
-    maxWorkers: 2,
-    action: {
-      begin (block) {
-        let task = this.blocks.get(block);
-        task.emitter = this.getEmitter();
-        task.emitter.x = block.middleX;
-        task.emitter.y = block.middleY;
-        task.emitter.makeParticles('dust');
-        task.emitter.setRotation(0, 0);
-        task.emitter.setAlpha(0.3, 0.8);
-        task.emitter.setScale(0.5, 1);
-        task.emitter.gravity = -2;
-      },
-
-      perform (block) {
-        let task = this.blocks.get(block);
-        // explode, lifetime, n/a, num particles
-        task.emitter.start(true, 500, null, 10);
-      },
-
-      finish (block) {
-        let task = this.blocks.get(block);
-        task.emitter.kill();
-        //this.emitter.destroy();
-        this.parent.level.removeWall(block.x, block.y, 1, 1, 'walls', true);
-      }
-    },
-
-    test (block) {
-      let wall = block.getWall();
-      if (wall.index > -1) {
-        return true;
-      }
-      return false;
-    }
-  },
-
-  buildWall: {
-    type:       'general',
-    name:       'Wall',
-    blocks:     [],
-    increment:  34,
-    action: {
-      begin (block) {
-        this.emitter = this.game.add.emitter(block.middleX, block.middleY);
-        this.emitter.makeParticles('dust');
-        this.emitter.setRotation(0, 0);
-        this.emitter.setAlpha(0.3, 0.8);
-        this.emitter.setScale(0.5, 1);
-        this.emitter.gravity = -2;
-      },
-
-      perform (block) {
-        // explode, lifetime, n/a, num particles
-        this.emitter.start(true, 500, null, 10);
-      },
-
-      finish (block) {
-        this.emitter.kill();
-        this.emitter.destroy();
-        console.log(this.parent.level.addWall(block.x, block.y, 1, 1));
-      }
-    },
-
-    test (block) {
-      let wall = block.getWall();
-      if (wall.index === -1) {
-        return true;
-      }
-      return false;
-    }
-  }
-};
 
 export default Controls;

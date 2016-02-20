@@ -7,9 +7,10 @@ class Item extends Phaser.Sprite {
     super(game, ... args);
 
     this.name   = 'Item';
+    this.key    = 'objects';
+    this.frame  = 'pot';
     this.block  = null;
     this.uuid   = this.game.randomData.uuid();
-
   }
 
   /**
@@ -19,6 +20,8 @@ class Item extends Phaser.Sprite {
    */
   setup (options) {
     this.name = options.name;
+    this.key = options.key;
+    this.frame = options.frame;
     this.anchor.setTo(0.5, 0.5);
   }
 

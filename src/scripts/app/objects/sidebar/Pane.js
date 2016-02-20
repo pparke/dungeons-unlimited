@@ -39,20 +39,21 @@ class Pane extends Phaser.Group {
 
   }
 
-  setupItems (items) {
+  setupButtons (elems) {
     let container = this.layout.items.container;
     let element = this.layout.items.element;
     let numCols = Math.floor(container.width / (element.width + element.padding*2));
-    items.forEach((item, i) => {
+    elems.forEach((elem, i) => {
+      let item = elem.item;
       let row = Math.floor(this.items.size / numCols);
       let col = this.items.size % numCols;
       let x = (col * element.width) + container.x + element.padding*2*col+element.padding;
       let y = (row * element.height) + container.y + element.padding*2*row+element.padding;
       console.log(item)
-      let button  = this.createButton(x, y, item.action, item.context);
+      let button  = this.createButton(x, y, elem.action, elem.context);
       let centerX = button.x + button.width/2;
       let centerY = button.y + button.height/2;
-      let text    = this.createText(centerX, centerY + button.height/2 + this.font.height/2, item.text);
+      let text    = this.createText(centerX, centerY + button.height/2 + this.font.height/2, item.name);
       let icon    = this.createIcon(centerX, centerY, item.key, item.frame);
       this.items.set(item.name, { button: button, text: text, icon: icon });
     });

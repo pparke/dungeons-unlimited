@@ -415,7 +415,7 @@ class Level extends Phaser.Tilemap {
    */
   placeItems (block, items) {
     if (!Array.isArray(items)) {
-      items = [items];
+      items = [ items ];
     }
     items.forEach((item) => {
       if (!(item instanceof Item)) {

@@ -38,8 +38,6 @@ class SelectBox extends Phaser.Graphics {
     if (this.selecting) {
       let pointer = this.game.input.activePointer;
       if (pointer.isDown) {
-
-
         if (this.fixed) {
           let x = snapToFloor(pointer.worldX, this.grid.width);
           let y = snapToFloor(pointer.worldY, this.grid.height);
@@ -137,7 +135,7 @@ class SelectBox extends Phaser.Graphics {
      Clear all graphics and reset the line style
   */
   reset () {
-    this.clear()
+    this.clear();
     this.lineStyle(this.stroke, this.color, this.alpha);
   }
 
@@ -174,8 +172,6 @@ class SelectBox extends Phaser.Graphics {
     this.reset();
     this.selecting = false;
   }
-
-
 
   /**
      Get Rect

@@ -7,7 +7,9 @@ import Menu       from './Menu';
 import Sidebar    from './sidebar/Sidebar';
 import Meters     from './Meters';
 import Block      from './Block';
+import Item       from './Item';
 
+import items      from '../data/items';
 import * as jobCommands from '../commands/commands';
 
 class Controls {
@@ -25,7 +27,7 @@ class Controls {
 
     this.selectionModes = [ 'job', 'info' ];
     this.selectionMode  = 'job';
-    this.currentItem    = 'pot';
+    this.currentItem    = items.placable[0];
     this.jobCommands    = jobCommands;
     this._jobCommand     = 'dig';
     this.menu           = new Menu(this.game);
@@ -134,58 +136,19 @@ class Controls {
       }
     });
 
-    pane.setupItems([
-      {
-        name: 'pot',
+    let placable = items.placable;
+
+    let buttons = placable.map((item) => {
+      return {
         action () {
-          console.log('clicked')
+          this.currentItem = item;
         },
         context: this,
-        key: 'objects',
-        frame: 'pot',
-        text: 'Pot'
-      },
-      {
-        name: 'chest',
-        action () {
-          console.log('clicked')
-        },
-        context: this,
-        key: 'objects',
-        frame: 'chest',
-        text: 'Chest'
-      },
-      {
-        name: 'goldLarge',
-        action () {
-          console.log('clicked')
-        },
-        context: this,
-        key: 'objects',
-        frame: 'goldLarge',
-        text: 'Gold'
-      },
-      {
-        name: 'gems',
-        action () {
-          console.log('clicked')
-        },
-        context: this,
-        key: 'objects',
-        frame: 'gems',
-        text: 'Gems'
-      },
-      {
-        name: 'sign',
-        action () {
-          console.log('clicked')
-        },
-        context: this,
-        key: 'objects',
-        frame: 'sign',
-        text: 'Sign'
-      }
-    ])
+        item: item
+      };
+    });
+
+    pane.setupButtons(buttons);
   }
 
   /**
@@ -232,7 +195,9 @@ class Controls {
      @param {Phaser.Rectangle} rect - the selected area
    */
   onReleased (rect) {
+    console.log('rect is', rect)
     let blocks  = this.level.getBlocks(rect.x, rect.y, rect.width, rect.height);
+    console.log('blocks', blocks)
     let mobs    = this.denizens.getMobs(this.level.getWorldRect(rect));
 
     console.log('mobs', mobs)
@@ -272,11 +237,13 @@ class Controls {
      @param {array} mobs - the array of mobs to apply the job to
    */
   assignJob (blocks, mobs) {
+    console.log('assignJob')
     let command = this.jobCommands[this.jobCommand];
     // filter blocks based on job requirements
     command.blocks = blocks.filter(command.test);
 
     // TODO: load contextual select menu in sidebar for jobs that need it
+    command.items = [this.currentItem];
 
     // only add job if there are blocks to work on
     if (command.blocks.length > 0) {
